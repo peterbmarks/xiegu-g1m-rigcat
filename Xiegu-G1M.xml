@@ -1,0 +1,320 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+
+  Xiegu G1M RigCAT definitions for use with fldigi
+
+  I took the IC-7300 file and stripped out most things.
+  http://www.w1hkj.com/FldigiHelp/rig_xml_page.html
+  
+
+-->
+
+<RIGDEF>
+
+  <RIG>Xiegu G1M</RIG>
+
+  <PROGRAMMER>
+    Originator : Peter Marks, VK3TPM
+    Tested by  : 
+    Updated by : 
+  </PROGRAMMER>
+
+  <STATUS>
+    Tested:     
+    Version:    1.00
+    Date:       20/8/2021
+  </STATUS>
+
+  <TITLE>RigCAT - Xiegu-G1M</TITLE>
+
+<!--    default settings for initial setup  -->
+
+<!-- 50ms Time Out  -->
+  <TIMEOUT>50</TIMEOUT>
+<!-- Max. 5 retries before failure  -->
+  <RETRIES>5</RETRIES>
+<!-- No write delay: Send commands immediately  -->
+  <WRITE_DELAY>0</WRITE_DELAY>
+<!-- TT in milliseconds, not used -->
+<!-- <POST_WRITE_DELAY>TT</POST_WRITE_DELAY>  -->
+
+<!--    Serial Interface definitions 19200-8N1 would be shorter :-) -->
+<!-- Set something reasonable fast  -->
+  <BAUDRATE>19200</BAUDRATE>
+<!-- One Stop-Bit   -->
+  <STOPBITS>1</STOPBITS>
+
+<!-- CI-V-CAT-Commands are used to control the PTT. See comments at the
+     end of this file to read more!
+-->
+<!-- true:  H/W handshake data flow control -->
+  <RTSCTS>false</RTSCTS>
+<!-- RTS / DTR are not used for PTT: Do not change this unless you
+     know what you are doing! -->
+<!-- true:  toggle RTS signal line for PTT  -->
+  <RTSPTT>false</RTSPTT>
+<!-- true:  toggle DTR signal line for PTT  -->
+  <DTRPTT>false</DTRPTT>
+<!-- true:  set RTS signal line to +12V -->
+  <RTSPLUS>false</RTSPLUS>
+<!-- true:  set DTR signal line to +12V -->
+  <DTRPLUS>false</DTRPLUS>
+<!-- true:  enable PTT CI-V-CAT-command -->
+  <CMDPTT>true</CMDPTT>
+<!-- true:  The TRX CI-V-Interface echoes all chars -->
+  <ECHO>true</ECHO>
+
+<!-- Please note: Mode 06 is not defined by the IC-7300 architecture    -->
+<!-- My DSP Filters are set to 1.8KHz (flt1), 2.4 KHz (flt2) and
+     3.0 KHz (flt3). Hence, I use Filter 3 for digi modes on all bands  -->
+<!--
+     CW / CW-R mode strings corrected                                   -->
+
+  <MODES>
+    <ELEMENT> <SYMBOL>USB</SYMBOL>    <BYTES>01 00 03</BYTES> </ELEMENT>
+    <ELEMENT> <SYMBOL>LSB</SYMBOL>    <BYTES>00 00 03</BYTES> </ELEMENT>  
+    <ELEMENT> <SYMBOL>AM</SYMBOL>     <BYTES>02 00 03</BYTES> </ELEMENT>
+    <ELEMENT> <SYMBOL>CW</SYMBOL>     <BYTES>03 00 03</BYTES> </ELEMENT>
+  </MODES>                            <!--    |  |  +- Filter 3
+                                              |  +.....Data Mode if 01
+                                              +....... TRX Mode
+                                      -->
+
+<!-- lsb mode strings should match those given in the modes id specifier    -->
+  <LSBMODES>
+    <STRING>LSB</STRING>
+  </LSBMODES>
+
+<!--  Bandwith symbols are valid for SSB and CW modes. Does not
+      make much sense for the IC-7300 ... at least as I perceive it, but
+      I may be wrong .. -->
+  <BANDWIDTHS>
+    
+  </BANDWIDTHS>
+
+
+<!--
+    CI-V-Command results: fldigi can parse and decode message returned
+    from the transceiver that define 4 aspects of the transceiver operation:
+    .   OK data accepted by the transceiver
+    .   BAD (NG - no good) data rejected by the transceiver
+    .   MODE current operating mode of the transceiver
+    .   BW current bandwidth setting of the transceiver
+    .   FREQ frequency of the active VFO (might be either A or B)
+-->
+
+<!--  OK data accepted by the transceiver
+      Six bytes command response
+-->
+  <REPLY><SYMBOL>OK</SYMBOL><SIZE>6</SIZE>
+    <BYTES>FE FE E0 94 FB FD</BYTES>
+  </REPLY>
+
+<!--  BAD (NG - no good) data rejected by the transceiver
+      Six bytes command response
+-->
+  <REPLY><SYMBOL>BAD</SYMBOL><SIZE>6</SIZE>
+    <BYTES>FE FE E0 94 FA FD</BYTES>
+  </REPLY>
+
+<!--  MODE current operating mode of the transceiver, eight bytes command
+      response
+      Prefix + CI-V-Command code 26 00 (current VFO)
+      Three byte binary data is returned corresponding to the MODE
+      definitions above followed by one byte trailer
+-->
+  <REPLY><SYMBOL>MODE</SYMBOL><SIZE>10</SIZE>
+    <BYTES>FE FE E0 94 26 00</BYTES>
+    <DATA><DTYPE>BINARY</DTYPE><SIZE>3</SIZE></DATA>
+    <BYTE>FD</BYTE>
+  </REPLY>
+
+<!--  BW current bandwidth setting of the transceiver, eight bytes
+      command response
+      Prefix + CI-V-Command code 1A 03
+      One byte variable binary data followed by one byte trailer
+-->
+  <REPLY><SYMBOL>BW</SYMBOL><SIZE>8</SIZE>
+    <BYTES>FE FE E0 94 1A 03</BYTES>
+    <DATA><DTYPE>BINARY</DTYPE><SIZE>1</SIZE></DATA>
+    <BYTE>FD</BYTE>
+  </REPLY>
+
+<!--  FREQ frequency of the active VFO (might be either A or B)
+      Eleven bytes command response
+      5 bytes (ten BCD-Digits) frequency data returned
+      One byte trailer
+-->
+  <REPLY><SYMBOL>FREQ</SYMBOL><SIZE>11</SIZE>
+    <BYTES>FE FE E0 94 03</BYTES>
+    <DATA>
+      <DTYPE>BCD</DTYPE>
+      <SIZE>10</SIZE>
+      <MAX>21450000</MAX>
+      <MIN>30000</MIN>
+      <RESOL>1</RESOL>
+      <REV>true</REV>
+    </DATA>
+    <BYTE>FD</BYTE>
+  </REPLY>
+
+<!--
+    CI-V-Commands:
+-->
+
+<!--  Set operating frequency of current VFO, eleven bytes command length
+      Prefix + CI-V-Command code 05
+      One byte trailer
+      Result (command response) may be OK or BAD (Not Good)
+      5 bytes (ten BCD-Digits) frequency data
+-->
+  <COMMAND><SYMBOL>SETFREQ</SYMBOL><SIZE>11</SIZE>
+    <BYTES>FE FE 94 E0 05</BYTES>
+    <DATA>
+      <DTYPE>BCD</DTYPE>
+      <SIZE>10</SIZE>
+      <MAX>21450000</MAX>
+      <MIN>30000</MIN>
+      <RESOL>1</RESOL>
+      <REV>true</REV>
+    </DATA>
+    <BYTE>FD</BYTE>
+      <OK>OK</OK> <BAD>BAD</BAD>
+  </COMMAND>
+
+<!--  Read operating frequency of curren VFO, six bytes command length
+      Prefix + CI-V-Command code 03 + trailer
+      Result (command response) is FREQ ... or BAD
+-->
+  <COMMAND><SYMBOL>GETFREQ</SYMBOL><SIZE>6</SIZE>
+    <BYTES>FE FE 94 E0 03 FD</BYTES>
+    <INFO>FREQ</INFO>
+  </COMMAND>
+
+
+<!-- SETMODE and GETMODE usually use the CI-V-Commands 01 and 04. Both
+     are changed with the IC-7300 concept and are not working as I like it.
+     To set the DATA Mode (because of the IC-7300 internal sound card)
+     AND the Filter on the current VFO (here case VFO 0) ... and there
+     is one command only available.
+     Hence, the CI-V-Command 26. This makes life easier, does it really?
+-->
+
+<!-- Operating mode selection for transceive
+     Prefix + CI-V-Command code 26 00 (current VFO 0)
+     Three byte binary MODE data as declared above followed by one byte
+     trailer
+     Result may be OK or BAD (Not Good)
+-->
+<!-- 
+  <COMMAND><SYMBOL>SETMODE</SYMBOL><SIZE>10</SIZE>
+    <BYTES>FE FE 94 E0 26 00</BYTES>
+    <DATA><DTYPE>BYTES</DTYPE><SIZE>3</SIZE></DATA>
+    <BYTE>FD</BYTE>
+    <OK>OK</OK> <BAD>BAD</BAD>
+  </COMMAND>
+ -->
+
+<!-- Read operating mode
+     Prefix + CI-V-Command code 26 00 + (current VFO 0) trailer
+     Result (command response) is MODE ... or BAD
+-->
+<!-- 
+  <COMMAND><SYMBOL>GETMODE</SYMBOL><SIZE>6</SIZE>
+    <BYTES>FE FE 94 E0 26 00 FD</BYTES>
+    <INFO>MODE</INFO>
+  </COMMAND>
+ -->
+
+
+<!-- Use PTT Commands via CI-V and switch off RTS and DTR control. There 
+     are good reasons.
+       . This ensures CI-V is working
+       . The signal lines RTS, DTR, CTS etc. may be used for serial flow 
+         control on very high speed USB links
+       . Using a serial terminal programm to debug the CI-V interface 
+         RTS and DTR signals do not confuse the TRX (eg. switch on Tx 
+         attached to an untuned antenna)
+       . The TRX is not confused by the USB testing process during computer
+         startup
+       . Keep the PTTON definitions at the end of the file. If there are 
+         unrecoverable errors before theese definitions, PTT just does 
+         not work :-)
+    -->
+
+<!-- Set transceiver status RX == PTT off    
+     Prefix + CI-V-Command code 1C 00 00 + trailer   
+     Result may be OK or BAD (Not Good)  
+-->
+  <COMMAND><SYMBOL>PTTOFF</SYMBOL><SIZE>8</SIZE>
+    <BYTES>FE FE 94 E0 1C 00 00 FD</BYTES>
+    <OK>OK</OK> <BAD>BAD</BAD>
+  </COMMAND>
+
+<!-- Set transceiver status TX == PTT on 
+     Prefix + CI-V-Command code 1C 00 01 + trailer   
+     Result may be OK or BAD (Not Good)  
+-->
+  <COMMAND><SYMBOL>PTTON</SYMBOL><SIZE>8</SIZE>
+    <BYTES>FE FE 94 E0 1C 00 01 FD</BYTES>
+    <OK>OK</OK> <BAD>BAD</BAD>
+  </COMMAND>
+
+<!-- ... JW: Copy, Paste 7200, edit contrlr addr... -->
+
+<!-- power meter scale mapping -->
+<PMETER>
+   0,   0;   49,  12;   74,  20; 
+  89,  25;  103,  30;  124,  40; 
+ 143,  50;  183,  75;  213, 100;
+ 255, 120
+</PMETER>
+
+<!-- smeter scale mapping -->
+<!-- 
+<SMETER> 0,0; 255,100 </SMETER>
+ -->
+
+<!-- 
+<REPLY>
+  <SYMBOL>SMETER</SYMBOL>
+  <SIZE>9</SIZE>
+	<BYTES>FE FE E0 94 15 02</BYTES>
+	<DATA>
+		<DTYPE>BCD</DTYPE>
+		<SIZE>3</SIZE>
+		<MAX>255</MAX>
+		<MIN>0</MIN>
+		<RESOL>1</RESOL>
+		<REV>false</REV>
+	 </DATA>
+	<BYTE>FD</BYTE>
+</REPLY>
+
+<COMMAND>
+  <SYMBOL>GET_SMETER</SYMBOL>
+  <SIZE>7</SIZE>
+  <BYTES>FE FE 94 E0 15 02 FD</BYTES>
+  <INFO>SMETER</INFO>
+</COMMAND>
+
+<REPLY>
+  <SYMBOL>PWRMETER</SYMBOL>
+  <SIZE>9</SIZE>
+	<BYTES>FE FE E0 94 15 11</BYTES>
+	<DATA>
+		<DTYPE>BCD</DTYPE>
+		<SIZE>3</SIZE>
+		<MAX>255</MAX>
+		<MIN>0</MIN>
+		<RESOL>1</RESOL>
+		<REV>false</REV>
+	 </DATA>
+	<BYTE>FD</BYTE>
+</REPLY>
+ -->
+
+
+</RIGDEF>
+
+<!--    That's all folks !!!    -->
