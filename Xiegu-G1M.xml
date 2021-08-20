@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
+  	Xiegu G1M RigCAT definitions for use with fldigi
 
-  Xiegu G1M RigCAT definitions for use with fldigi
-
-  I took the IC-7300 file and stripped out most things.
-  http://www.w1hkj.com/FldigiHelp/rig_xml_page.html
+  	I took the IC-7300 file and stripped out most things.
+  	http://www.w1hkj.com/FldigiHelp/rig_xml_page.html
   
-
+	I've just found the Xiegu G90 xml file and am bringing over things that
+	work in it.
 -->
 
 <RIGDEF>
@@ -21,7 +21,7 @@
 
   <STATUS>
     Tested:     
-    Version:    1.00
+    Version:    1.01
     Date:       20/8/2021
   </STATUS>
 
@@ -64,81 +64,64 @@
 <!-- true:  The TRX CI-V-Interface echoes all chars -->
   <ECHO>true</ECHO>
 
-<!-- Please note: Mode 06 is not defined by the IC-7300 architecture    -->
-<!-- My DSP Filters are set to 1.8KHz (flt1), 2.4 KHz (flt2) and
-     3.0 KHz (flt3). Hence, I use Filter 3 for digi modes on all bands  -->
-<!--
-     CW / CW-R mode strings corrected                                   -->
+<MODES>
+	<ELEMENT><SYMBOL>LSB</SYMBOL><BYTE>00</BYTE></ELEMENT>
+	<ELEMENT><SYMBOL>USB</SYMBOL><BYTE>01</BYTE></ELEMENT>
+	<ELEMENT><SYMBOL>AM</SYMBOL><BYTE>02</BYTE></ELEMENT>
+	<ELEMENT><SYMBOL>CW</SYMBOL><BYTE>03</BYTE></ELEMENT>
+</MODES>
 
-  <MODES>
-    <ELEMENT> <SYMBOL>USB</SYMBOL>    <BYTES>01 00 03</BYTES> </ELEMENT>
-    <ELEMENT> <SYMBOL>LSB</SYMBOL>    <BYTES>00 00 03</BYTES> </ELEMENT>  
-    <ELEMENT> <SYMBOL>AM</SYMBOL>     <BYTES>02 00 03</BYTES> </ELEMENT>
-    <ELEMENT> <SYMBOL>CW</SYMBOL>     <BYTES>03 00 03</BYTES> </ELEMENT>
-  </MODES>                            <!--    |  |  +- Filter 3
-                                              |  +.....Data Mode if 01
-                                              +....... TRX Mode
-                                      -->
+<REPLY>
+	<SYMBOL>OK</SYMBOL>
+	<SIZE>6</SIZE>
+	<BYTES>FE FE E0 90</BYTES>
+	<BYTE>FB</BYTE>
+	<BYTE>FD</BYTE>
+</REPLY>
 
-<!-- lsb mode strings should match those given in the modes id specifier    -->
-  <LSBMODES>
-    <STRING>LSB</STRING>
-  </LSBMODES>
+<REPLY>
+	<SYMBOL>BAD</SYMBOL>
+	<SIZE>6</SIZE>
+	<BYTES>FE FE E0 90</BYTES>
+	<BYTE>FA</BYTE>
+	<BYTE>FD</BYTE>
+</REPLY>
 
-<!--  Bandwith symbols are valid for SSB and CW modes. Does not
-      make much sense for the IC-7300 ... at least as I perceive it, but
-      I may be wrong .. -->
-  <BANDWIDTHS>
-    
-  </BANDWIDTHS>
+<REPLY>
+	<SYMBOL>MODE</SYMBOL>
+	<SIZE>8</SIZE>
+	<BYTES>FE FE E0 90</BYTES>
+	<BYTE>04</BYTE>
+	<DATA>
+		<DTYPE>BINARY</DTYPE>
+		<SIZE>1</SIZE>
+	</DATA>
+	<BYTE>02 FD</BYTE>
+</REPLY>
 
-
-<!--
-    CI-V-Command results: fldigi can parse and decode message returned
-    from the transceiver that define 4 aspects of the transceiver operation:
-    .   OK data accepted by the transceiver
-    .   BAD (NG - no good) data rejected by the transceiver
-    .   MODE current operating mode of the transceiver
-    .   BW current bandwidth setting of the transceiver
-    .   FREQ frequency of the active VFO (might be either A or B)
--->
-
-<!--  OK data accepted by the transceiver
-      Six bytes command response
--->
-  <REPLY><SYMBOL>OK</SYMBOL><SIZE>6</SIZE>
-    <BYTES>FE FE E0 94 FB FD</BYTES>
-  </REPLY>
-
-<!--  BAD (NG - no good) data rejected by the transceiver
-      Six bytes command response
--->
-  <REPLY><SYMBOL>BAD</SYMBOL><SIZE>6</SIZE>
-    <BYTES>FE FE E0 94 FA FD</BYTES>
-  </REPLY>
-
-<!--  MODE current operating mode of the transceiver, eight bytes command
-      response
-      Prefix + CI-V-Command code 26 00 (current VFO)
-      Three byte binary data is returned corresponding to the MODE
-      definitions above followed by one byte trailer
--->
-  <REPLY><SYMBOL>MODE</SYMBOL><SIZE>10</SIZE>
-    <BYTES>FE FE E0 94 26 00</BYTES>
-    <DATA><DTYPE>BINARY</DTYPE><SIZE>3</SIZE></DATA>
-    <BYTE>FD</BYTE>
-  </REPLY>
-
-<!--  BW current bandwidth setting of the transceiver, eight bytes
-      command response
-      Prefix + CI-V-Command code 1A 03
-      One byte variable binary data followed by one byte trailer
--->
-  <REPLY><SYMBOL>BW</SYMBOL><SIZE>8</SIZE>
-    <BYTES>FE FE E0 94 1A 03</BYTES>
-    <DATA><DTYPE>BINARY</DTYPE><SIZE>1</SIZE></DATA>
-    <BYTE>FD</BYTE>
-  </REPLY>
+<COMMAND>
+	<SYMBOL>SETMODE</SYMBOL>
+	<SIZE>8</SIZE>
+	<BYTES>FE FE 90 E0</BYTES>
+	<BYTE>06</BYTE>
+	<DATA>
+		<DTYPE>BINARY</DTYPE>
+		<SIZE>1</SIZE>
+	</DATA>
+	<BYTES>02 FD</BYTES>
+	<OK>OK</OK>
+	<BAD>BAD</BAD>
+</COMMAND>
+	
+<COMMAND>
+	<SYMBOL>GETMODE</SYMBOL>
+	<SIZE>7</SIZE>
+	<BYTES>FE FE 90 E0</BYTES>
+	<BYTE>04</BYTE>
+	<FILL>1</FILL>
+	<BYTE>FD</BYTE>
+	<INFO>MODE</INFO>
+</COMMAND>
 
 <!--  FREQ frequency of the active VFO (might be either A or B)
       Eleven bytes command response
